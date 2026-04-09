@@ -9,10 +9,12 @@ import { CategoryBadge } from "@/components/CategoryBadge";
 import { useCurrentPrompt } from "@/components/CurrentPromptContext";
 import { apiRequest } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 export default function FollowUp() {
   const [, setLocation] = useHashLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { state, setFollowUpAnswers, setGeneratedPrompt } = useCurrentPrompt();
   const [answers, setAnswers] = useState<Record<string, string>>(state.followUpAnswers);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -40,9 +42,16 @@ export default function FollowUp() {
       setGeneratedPrompt(prompt);
       queryClient.invalidateQueries({ queryKey: ["/api/prompts"] });
       setLocation("/output");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Generation failed:", error);
       setIsGenerating(false);
+      toast({
+        title: "Generation failed",
+        description: error?.message?.includes("500")
+          ? "Server error — make sure your ANTHROPIC_API_KEY is set in Render environment variables."
+          : error?.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 

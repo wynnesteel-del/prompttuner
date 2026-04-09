@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { useCurrentPrompt } from "@/components/CurrentPromptContext";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Template } from "@shared/schema";
 
 interface TemplateField {
@@ -31,6 +32,7 @@ const CATEGORIES = [
 export default function Templates() {
   const [, setLocation] = useHashLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { setGeneratedPrompt, setRawInput, setCategory } = useCurrentPrompt();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -58,6 +60,15 @@ export default function Templates() {
       setSelectedTemplate(null);
       setFieldValues({});
       setLocation("/output");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Generation failed",
+        description: error.message.includes("ANTHROPIC") || error.message.includes("500")
+          ? "Server error — check that your ANTHROPIC_API_KEY is set in Render environment variables."
+          : error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
