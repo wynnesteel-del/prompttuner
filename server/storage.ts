@@ -3,7 +3,33 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import { eq, desc } from "drizzle-orm";
 
-const sqlite = new Database("data.db");
+const sqlite = new Database("data.db");sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS prompts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    raw_input TEXT NOT NULL,
+    category TEXT NOT NULL,
+    follow_up_answers TEXT,
+    prompt_quick TEXT,
+    prompt_detailed TEXT,
+    prompt_expert TEXT,
+    money_angle_suggestion TEXT,
+    money_angle_prompt TEXT,
+    ai_target TEXT DEFAULT 'perplexity',
+    is_favorite INTEGER DEFAULT 0,
+    created_at TEXT
+  );
+  CREATE TABLE IF NOT EXISTS templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    prompt_template TEXT NOT NULL,
+    fields TEXT NOT NULL,
+    icon TEXT,
+    sort_order INTEGER DEFAULT 0
+  );
+`);
+
 sqlite.pragma("journal_mode = WAL");
 
 export const db = drizzle(sqlite);
