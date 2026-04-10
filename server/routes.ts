@@ -3,7 +3,12 @@ import { type Server } from "http";
 import { storage } from "./storage";
 import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic();
+function getAnthropicClient(): Anthropic {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error("ANTHROPIC_API_KEY environment variable is not set. Add it to your Render environment variables.");
+  }
+  return new Anthropic();
+}
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   shopping: ["buy", "purchase", "price", "cost", "deal", "compare", "best", "cheapest", "review", "vs", "under $", "amazon", "walmart", "recommend"],
@@ -165,7 +170,7 @@ Category: ${category}
 Follow-up answers: ${JSON.stringify(followUpAnswers || {})}
 AI target: ${aiTarget || "perplexity"}`;
 
-      const response = await anthropic.messages.create({
+      const response = await getAnthropicClient().messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 2048,
         system: SYSTEM_PROMPT,
@@ -268,7 +273,7 @@ Category: ${template.category}
 Follow-up answers: ${JSON.stringify(fieldValues)}
 AI target: ${aiTarget || "perplexity"}`;
 
-      const response = await anthropic.messages.create({
+      const response = await getAnthropicClient().messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 2048,
         system: SYSTEM_PROMPT,
