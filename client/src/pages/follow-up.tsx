@@ -32,7 +32,7 @@ export default function FollowUp() {
     setFollowUpAnswers(answers);
 
     try {
-      const res = await apiRequest("POST", "/api/generate", {
+      const res = await apiRequest("POST", "/api/generate-prompt", {
         rawInput: state.rawInput,
         category: state.category,
         followUpAnswers: answers,

@@ -29,7 +29,7 @@ export default function Output() {
 
   const regenerateMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/generate", {
+      const res = await apiRequest("POST", "/api/generate-prompt", {
         rawInput: state.rawInput,
         category: state.category,
         followUpAnswers: state.followUpAnswers,
