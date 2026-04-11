@@ -158,7 +158,7 @@ export async function registerRoutes(
   });
 
   // Generate prompts using Claude
-  app.post("/api/generate", async (req, res) => {
+  app.post("/api/generate-prompt", async (req, res) => {
     try {
       const { rawInput, category, followUpAnswers, aiTarget } = req.body;
       if (!rawInput || !category) {
