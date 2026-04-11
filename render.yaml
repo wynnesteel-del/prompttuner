@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: prompttuner-1
+    runtime: node
+    buildCommand: npm install --production
+    startCommand: node dist/index.cjs
+    envVars:
+      - key: NODE_ENV
+        value: production
