@@ -200,7 +200,12 @@ AI target: ${aiTarget || "perplexity"}`;
       res.json(prompt);
     } catch (error: any) {
       console.error("Generate error:", error);
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ 
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        cause: error.cause ? String(error.cause) : undefined
+      });
     }
   });
 
