@@ -146,28 +146,45 @@ export default function Templates() {
             if (e.target === e.currentTarget) closeTemplate();
           }}
         >
-          <div className="bg-card w-full max-w-lg rounded-t-xl md:rounded-xl flex flex-col" style={{maxHeight: 'calc(100dvh - 64px - env(safe-area-inset-bottom, 0px))'}}>
-            <div className="sticky top-0 bg-card p-4 border-b border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{selectedTemplate.icon}</span>
-                <h3 className="text-sm font-semibold">{selectedTemplate.title}</h3>
+          <div className="bg-card w-full max-w-lg rounded-t-xl md:rounded-xl flex flex-col" style={{maxHeight: '80svh'}}>
+            {/* Header — always visible, contains close + generate so keyboard can't hide them */}
+            <div className="sticky top-0 bg-card p-4 border-b border-border z-10">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{selectedTemplate.icon}</span>
+                  <h3 className="text-sm font-semibold">{selectedTemplate.title}</h3>
+                </div>
+                <button
+                  data-testid="close-template-modal"
+                  className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground"
+                  onClick={closeTemplate}
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                data-testid="close-template-modal"
-                className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground"
-                onClick={closeTemplate}
+              <Button
+                data-testid="generate-from-template-btn"
+                className="w-full bg-primary hover:bg-primary/90"
+                disabled={generateMutation.isPending}
+                onClick={() => generateMutation.mutate()}
               >
-                <X className="h-4 w-4" />
-              </button>
+                {generateMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  "Generate from Template"
+                )}
+              </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling']}}>
+            {/* Scrollable fields — scroll DOWN to fill in, button always above */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{WebkitOverflowScrolling: 'touch'}}>
               <CategoryBadge category={selectedTemplate.category} />
-
               <p className="text-xs text-muted-foreground">
                 {selectedTemplate.description}
               </p>
-
               <div className="space-y-3">
                 {parseFields(selectedTemplate.fields).map((field) => (
                   <div key={field.key}>
@@ -186,24 +203,6 @@ export default function Templates() {
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="p-4 border-t border-border bg-card">
-              <Button
-                data-testid="generate-from-template-btn"
-                className="w-full bg-primary hover:bg-primary/90"
-                disabled={generateMutation.isPending}
-                onClick={() => generateMutation.mutate()}
-              >
-                {generateMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  "Generate from Template"
-                )}
-              </Button>
             </div>
           </div>
         </div>
