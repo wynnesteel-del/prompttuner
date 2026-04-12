@@ -146,7 +146,7 @@ export default function Templates() {
             if (e.target === e.currentTarget) closeTemplate();
           }}
         >
-          <div className="bg-card w-full max-w-lg rounded-t-xl md:rounded-xl flex flex-col" style={{maxHeight: 'calc(100dvh - 80px)'}}>
+          <div className="bg-card w-full max-w-lg rounded-t-xl md:rounded-xl flex flex-col" style={{maxHeight: 'calc(100dvh - 64px - env(safe-area-inset-bottom, 0px))'}}>
             <div className="sticky top-0 bg-card p-4 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xl">{selectedTemplate.icon}</span>
@@ -161,7 +161,7 @@ export default function Templates() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling']}}>
               <CategoryBadge category={selectedTemplate.category} />
 
               <p className="text-xs text-muted-foreground">

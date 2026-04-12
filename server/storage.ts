@@ -3,7 +3,10 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import { eq, desc } from "drizzle-orm";
 
-const sqlite = new Database("data.db");sqlite.exec(`
+// Use /tmp/data.db on Render (ephemeral but survives between requests/hot-reloads).
+// Falls back to ./data.db in local dev.
+const DB_PATH = process.env.NODE_ENV === "production" ? "/tmp/data.db" : "data.db";
+const sqlite = new Database(DB_PATH);sqlite.exec(`
   CREATE TABLE IF NOT EXISTS prompts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     raw_input TEXT NOT NULL,
