@@ -166,7 +166,7 @@ export default function Templates() {
       {selectedTemplate && (
         <div
           data-testid="template-modal"
-          className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center"
+          className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center pb-16 md:pb-0"
           onClick={(e) => {
             if (e.target === e.currentTarget) closeTemplate();
           }}
