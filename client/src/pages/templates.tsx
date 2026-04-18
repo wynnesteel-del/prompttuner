@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useHashLocation } from "wouter/use-hash-location";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Loader2, X } from "lucide-react";
+import { ArrowRight, Loader2, X, Camera, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,10 +37,31 @@ export default function Templates() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageMimeType, setImageMimeType] = useState<string>("image/jpeg");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const { data: templates = [] } = useQuery<Template[]>({
     queryKey: ["/api/templates"],
   });
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setImageBase64(result.split(",")[1]);
+      setImageMimeType(file.type || "image/jpeg");
+      setImagePreview(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearImage = () => {
+    setImageBase64(null);
+    setImagePreview(null);
+  };
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -49,6 +70,8 @@ export default function Templates() {
         templateId: selectedTemplate.id,
         fieldValues,
         aiTarget: "perplexity",
+        imageBase64: imageBase64 || undefined,
+        imageMimeType: imageBase64 ? imageMimeType : undefined,
       });
       return res.json();
     },
@@ -84,6 +107,8 @@ export default function Templates() {
   const closeTemplate = () => {
     setSelectedTemplate(null);
     setFieldValues({});
+    setImageBase64(null);
+    setImagePreview(null);
   };
 
   const parseFields = (fieldsJson: string): TemplateField[] => {
@@ -202,6 +227,46 @@ export default function Templates() {
                     />
                   </div>
                 ))}
+              </div>
+
+              {/* Image upload */}
+              <div className="pt-1">
+                <p className="text-xs font-medium text-foreground mb-2">
+                  Add a photo <span className="text-muted-foreground font-normal">(optional)</span>
+                </p>
+                {imagePreview ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={imagePreview}
+                      alt="Uploaded"
+                      className="w-full max-h-40 object-cover rounded-lg border border-border"
+                    />
+                    <button
+                      onClick={clearImage}
+                      className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-1 hover:bg-black/80"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 w-full cursor-pointer border border-dashed border-border rounded-lg p-3 hover:border-primary/50 hover:bg-muted/30 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                    />
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Take a photo or upload from gallery</span>
+                    <ImagePlus className="h-4 w-4 text-muted-foreground ml-auto" />
+                  </label>
+                )}
+                {imagePreview && (
+                  <p className="text-xs text-primary mt-1.5 flex items-center gap-1">
+                    <Camera className="h-3 w-3" /> Claude will analyze your photo
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useHashLocation } from "wouter/use-hash-location";
-import { ArrowLeft, RefreshCw, Star, Loader2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, Star, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +18,13 @@ const AI_TARGET_LABELS: Record<string, string> = {
   gemini: "Gemini",
 };
 
+const AI_OPEN_URLS: Record<string, string> = {
+  Perplexity: "https://www.perplexity.ai",
+  ChatGPT: "https://chat.openai.com",
+  Claude: "https://claude.ai",
+  Gemini: "https://gemini.google.com",
+};
+
 type PromptTab = "quick" | "detailed" | "expert";
 
 export default function Output() {
@@ -25,7 +32,7 @@ export default function Output() {
   const { state, setGeneratedPrompt } = useCurrentPrompt();
   const [activeTab, setActiveTab] = useState<PromptTab>("quick");
   const queryClient = useQueryClient();
-  const prompt = state.generatedPrompt;
+  const prompt = state.generatedPrompt as any; // includes suggestedAi + suggestedAiReason from API
 
   const regenerateMutation = useMutation({
     mutationFn: async () => {
@@ -138,6 +145,34 @@ export default function Output() {
           Regenerate
         </Button>
       </div>
+
+      {/* AI Suggestion Card */}
+      {prompt.suggestedAi && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-lg bg-primary/10 p-1.5">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-foreground mb-0.5">
+                Best AI for this prompt
+              </p>
+              <p className="text-sm font-bold text-primary">{prompt.suggestedAi}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{prompt.suggestedAiReason}</p>
+            </div>
+            {AI_OPEN_URLS[prompt.suggestedAi] && (
+              <a
+                href={AI_OPEN_URLS[prompt.suggestedAi]}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 text-xs font-medium text-primary border border-primary/30 rounded-lg px-3 py-1.5 hover:bg-primary/10 transition-colors"
+              >
+                Open →
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       {prompt.moneyAngleSuggestion && prompt.moneyAnglePrompt && (
         <MoneyAngleCard

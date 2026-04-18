@@ -97,6 +97,22 @@ function detectCategory(rawInput: string): string {
   return bestCategory;
 }
 
+function suggestAiTarget(category: string): { ai: string; reason: string } {
+  const map: Record<string, { ai: string; reason: string }> = {
+    research:        { ai: "Perplexity", reason: "Best for real-time web search & up-to-date info" },
+    shopping:        { ai: "Perplexity", reason: "Finds current prices, deals & live reviews" },
+    troubleshooting: { ai: "Claude",     reason: "Best for step-by-step diagnosis & repair" },
+    diy:             { ai: "Claude",     reason: "Best for detailed instructions & planning" },
+    writing:         { ai: "Claude",     reason: "Best for long-form & creative writing" },
+    business:        { ai: "ChatGPT",    reason: "Best for business strategy & marketing" },
+    content:         { ai: "ChatGPT",    reason: "Best for scripts, hooks & content ideas" },
+    finance:         { ai: "ChatGPT",    reason: "Best for financial analysis & planning" },
+    health:          { ai: "Perplexity", reason: "Best for current medical info & research" },
+    travel:          { ai: "Perplexity", reason: "Finds current flights, hotels & itineraries" },
+  };
+  return map[category] || { ai: "Perplexity", reason: "Great all-around starting point" };
+}
+
 function parseJsonFromResponse(text: string): any {
   // Strip markdown code blocks if present
   let cleaned = text.trim();
@@ -160,7 +176,7 @@ export async function registerRoutes(
   // Generate prompts using Claude
   app.post("/api/generate-prompt", async (req, res) => {
     try {
-      const { rawInput, category, followUpAnswers, aiTarget } = req.body;
+      const { rawInput, category, followUpAnswers, aiTarget, imageBase64, imageMimeType } = req.body;
       if (!rawInput || !category) {
         return res.status(400).json({ message: "rawInput and category are required" });
       }
@@ -170,11 +186,22 @@ Category: ${category}
 Follow-up answers: ${JSON.stringify(followUpAnswers || {})}
 AI target: ${aiTarget || "perplexity"}`;
 
+      const messageContent: any[] = [];
+      if (imageBase64 && imageMimeType) {
+        messageContent.push({
+          type: "image",
+          source: { type: "base64", media_type: imageMimeType, data: imageBase64 },
+        });
+        messageContent.push({ type: "text", text: `The user uploaded an image. Use what you can see in the image to make the generated prompts more specific and accurate.\n\n${userMessage}` });
+      } else {
+        messageContent.push({ type: "text", text: userMessage });
+      }
+
       const response = await getAnthropicClient().messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 2048,
         system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userMessage }],
+        messages: [{ role: "user", content: messageContent }],
       });
 
       const textContent = response.content.find((c) => c.type === "text");
@@ -183,6 +210,7 @@ AI target: ${aiTarget || "perplexity"}`;
       }
 
       const parsed = parseJsonFromResponse(textContent.text);
+      const suggestion = suggestAiTarget(category);
 
       const prompt = await storage.createPrompt({
         rawInput,
@@ -197,7 +225,7 @@ AI target: ${aiTarget || "perplexity"}`;
         isFavorite: false,
       });
 
-      res.json(prompt);
+      res.json({ ...prompt, suggestedAi: suggestion.ai, suggestedAiReason: suggestion.reason });
     } catch (error: any) {
       console.error("Generate error:", error);
       res.status(500).json({ 
@@ -257,7 +285,7 @@ AI target: ${aiTarget || "perplexity"}`;
   // Generate from template
   app.post("/api/generate-from-template", async (req, res) => {
     try {
-      const { templateId, fieldValues, aiTarget } = req.body;
+      const { templateId, fieldValues, aiTarget, imageBase64, imageMimeType } = req.body;
       if (!templateId || !fieldValues) {
         return res.status(400).json({ message: "templateId and fieldValues are required" });
       }
@@ -278,11 +306,22 @@ Category: ${template.category}
 Follow-up answers: ${JSON.stringify(fieldValues)}
 AI target: ${aiTarget || "perplexity"}`;
 
+      const messageContent: any[] = [];
+      if (imageBase64 && imageMimeType) {
+        messageContent.push({
+          type: "image",
+          source: { type: "base64", media_type: imageMimeType, data: imageBase64 },
+        });
+        messageContent.push({ type: "text", text: `The user uploaded an image of what they're working on. Analyze the image carefully and use specific details from it (model numbers, visible damage, components, materials, etc.) to make the generated prompts highly targeted and accurate.\n\n${userMessage}` });
+      } else {
+        messageContent.push({ type: "text", text: userMessage });
+      }
+
       const response = await getAnthropicClient().messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 2048,
         system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userMessage }],
+        messages: [{ role: "user", content: messageContent }],
       });
 
       const textContent = response.content.find((c) => c.type === "text");
@@ -291,6 +330,7 @@ AI target: ${aiTarget || "perplexity"}`;
       }
 
       const parsed = parseJsonFromResponse(textContent.text);
+      const suggestion = suggestAiTarget(template.category);
 
       const prompt = await storage.createPrompt({
         rawInput: filledPrompt,
@@ -305,7 +345,7 @@ AI target: ${aiTarget || "perplexity"}`;
         isFavorite: false,
       });
 
-      res.json(prompt);
+      res.json({ ...prompt, suggestedAi: suggestion.ai, suggestedAiReason: suggestion.reason });
     } catch (error: any) {
       console.error("Generate from template error:", error);
       res.status(500).json({ message: error.message });
