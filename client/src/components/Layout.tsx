@@ -64,7 +64,7 @@ export function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-60">
+      <main className="flex-1 min-w-0 md:ml-60">
         <div className="max-w-2xl mx-auto px-4 py-6 pb-20 md:pb-6">
           {/* Mobile Header */}
           <div className="flex items-center justify-between mb-4 md:hidden">

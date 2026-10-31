@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useHashLocation } from "wouter/use-hash-location";
 import { ArrowLeft, RefreshCw, Star, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,10 +55,12 @@ export default function Output() {
     },
   });
 
-  if (!prompt) {
-    setLocation("/");
-    return null;
-  }
+  // FIX: navigate in an effect, not during render (avoids React "update while rendering" warning)
+  useEffect(() => {
+    if (!prompt) setLocation("/");
+  }, [prompt, setLocation]);
+
+  if (!prompt) return null;
 
   const promptText: Record<PromptTab, string | null> = {
     quick: prompt.promptQuick,
@@ -101,6 +103,14 @@ export default function Output() {
         {prompt.aiTarget && (
           <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
             {AI_TARGET_LABELS[prompt.aiTarget] || prompt.aiTarget}
+          </span>
+        )}
+        {state.sourceTemplate && state.rawInput === prompt.rawInput && (
+          <span
+            data-testid="output-source-template"
+            className="text-xs text-primary bg-primary/10 px-2 py-1 rounded-full"
+          >
+            Template: {state.sourceTemplate.title}
           </span>
         )}
       </div>
