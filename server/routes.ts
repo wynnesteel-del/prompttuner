@@ -277,26 +277,52 @@ AI target: ${aiTarget || "perplexity"}`;
   // Generate from template
   app.post("/api/generate-from-template", async (req, res) => {
     try {
-      const { templateId, fieldValues, aiTarget } = req.body;
-      if (!templateId || !fieldValues) {
-        return res.status(400).json({ message: "templateId and fieldValues are required" });
-      }
+      const { templateId, fieldValues, aiTarget } = req.body ?? {};
 
-      const template = await storage.getTemplate(templateId);
+      // FIX: strict input validation (was: any truthy value accepted)
+      const id = Number(templateId);
+      if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ message: "templateId must be a positive integer" });
+      }
+      if (!fieldValues || typeof fieldValues !== "object" || Array.isArray(fieldValues)) {
+        return res.status(400).json({ message: "fieldValues must be an object" });
+      }
+      const ALLOWED_TARGETS = ["perplexity", "chatgpt", "claude", "gemini"];
+      const target = ALLOWED_TARGETS.includes(aiTarget) ? aiTarget : "perplexity";
+
+      const template = await storage.getTemplate(id);
       if (!template) {
         return res.status(404).json({ message: "Template not found" });
       }
 
-      // Fill in template
-      let filledPrompt = template.promptTemplate;
-      for (const [key, value] of Object.entries(fieldValues)) {
-        filledPrompt = filledPrompt.replace(new RegExp(`\\[${key}\\]`, "g"), value as string);
+      // Only accept keys the template actually defines; coerce to trimmed, length-capped strings.
+      let defined: Array<{ key: string; label: string; required?: boolean }> = [];
+      try {
+        defined = JSON.parse(template.fields);
+      } catch {
+        defined = [];
       }
+      const clean: Record<string, string> = {};
+      for (const f of defined) {
+        const raw = (fieldValues as Record<string, unknown>)[f.key];
+        clean[f.key] = typeof raw === "string" ? raw.trim().slice(0, 500) : "";
+      }
+
+      const missing = defined.filter((f) => f.required !== false && !clean[f.key]).map((f) => f.label);
+      if (missing.length > 0) {
+        return res.status(400).json({ message: `Please fill in: ${missing.join(", ")}`, missing });
+      }
+
+      // FIX: replacer FUNCTION so "$50", "$&", etc. are inserted literally; unfilled optional tokens removed.
+      const filledPrompt = template.promptTemplate
+        .replace(/\[([A-Z0-9_]+)\]/g, (_m, key: string) => clean[key] ?? "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
 
       const userMessage = `Raw question: ${filledPrompt}
 Category: ${template.category}
-Follow-up answers: ${JSON.stringify(fieldValues)}
-AI target: ${aiTarget || "perplexity"}`;
+Follow-up answers: ${JSON.stringify(clean)}
+AI target: ${target}`;
 
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
@@ -315,20 +341,28 @@ AI target: ${aiTarget || "perplexity"}`;
       const prompt = await storage.createPrompt({
         rawInput: filledPrompt,
         category: template.category,
-        followUpAnswers: JSON.stringify(fieldValues),
+        followUpAnswers: JSON.stringify(clean),
         promptQuick: parsed.prompt_quick,
         promptDetailed: parsed.prompt_detailed,
         promptExpert: parsed.prompt_expert,
         moneyAngleSuggestion: parsed.money_angle_suggestion || null,
         moneyAnglePrompt: parsed.money_angle_prompt || null,
-        aiTarget: aiTarget || "perplexity",
+        aiTarget: target,
         isFavorite: false,
       });
 
       res.json(prompt);
     } catch (error: any) {
       console.error("Generate from template error:", error);
-      res.status(500).json({ message: error.message });
+      // FIX: friendly message for the UI; full details stay in the server log.
+      const status = typeof error?.status === "number" ? error.status : 500;
+      const message =
+        status === 429
+          ? "The AI is busy right now. Wait a few seconds and try again."
+          : error instanceof SyntaxError
+            ? "The AI returned an unexpected format. Please try again."
+            : "The AI service had a problem generating your prompt. Please try again.";
+      res.status(status === 429 ? 429 : 502).json({ message });
     }
   });
 

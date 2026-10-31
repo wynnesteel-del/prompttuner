@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { useHashLocation } from "wouter/use-hash-location";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,8 @@ export default function FollowUp() {
         aiTarget: state.aiTarget,
       });
       const prompt = await res.json();
-      setGeneratedPrompt(prompt);
+      // FIX: commit before navigating, or Output mounts with no prompt and redirects Home
+      flushSync(() => setGeneratedPrompt(prompt));
       queryClient.invalidateQueries({ queryKey: ["/api/prompts"] });
       setLocation("/output");
     } catch (error) {

@@ -97,6 +97,16 @@ export default function Home() {
           onChange={(e) => setLocalInput(e.target.value)}
         />
 
+        {state.sourceTemplate && localInput === state.rawInput && (
+          <div
+            data-testid="home-template-banner"
+            className="text-xs rounded-lg bg-primary/10 text-primary px-3 py-2"
+          >
+            Loaded from template: <span className="font-medium">{state.sourceTemplate.title}</span>. Edit
+            anything, then tap Generate Prompt.
+          </div>
+        )}
+
         {detectedCategory && (
           <div data-testid="detected-category" className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Category:</span>

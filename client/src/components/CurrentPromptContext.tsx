@@ -15,6 +15,18 @@ interface CurrentPromptState {
   followUpAnswers: Record<string, string>;
   aiTarget: string;
   generatedPrompt: Prompt | null;
+  /** Set when the current prompt came from a template (null for free-typed prompts). */
+  sourceTemplate: { id: number; title: string } | null;
+}
+
+export interface TemplateHandoff {
+  templateId: number;
+  templateTitle: string;
+  rawInput: string;
+  category: string;
+  fieldValues: Record<string, string>;
+  aiTarget?: string;
+  generatedPrompt?: Prompt | null;
 }
 
 interface CurrentPromptContextType {
@@ -25,6 +37,8 @@ interface CurrentPromptContextType {
   setFollowUpAnswers: (answers: Record<string, string>) => void;
   setAiTarget: (target: string) => void;
   setGeneratedPrompt: (prompt: Prompt | null) => void;
+  /** One atomic update for the Templates -> Home/Output handoff (avoids half-updated state). */
+  loadFromTemplate: (handoff: TemplateHandoff) => void;
   reset: () => void;
 }
 
@@ -35,6 +49,7 @@ const defaultState: CurrentPromptState = {
   followUpAnswers: {},
   aiTarget: "perplexity",
   generatedPrompt: null,
+  sourceTemplate: null,
 };
 
 const CurrentPromptContext = createContext<CurrentPromptContextType>({
@@ -45,6 +60,7 @@ const CurrentPromptContext = createContext<CurrentPromptContextType>({
   setFollowUpAnswers: () => {},
   setAiTarget: () => {},
   setGeneratedPrompt: () => {},
+  loadFromTemplate: () => {},
   reset: () => {},
 });
 
@@ -57,6 +73,17 @@ export function CurrentPromptProvider({ children }: { children: ReactNode }) {
   const setFollowUpAnswers = (followUpAnswers: Record<string, string>) => setState((s) => ({ ...s, followUpAnswers }));
   const setAiTarget = (aiTarget: string) => setState((s) => ({ ...s, aiTarget }));
   const setGeneratedPrompt = (generatedPrompt: Prompt | null) => setState((s) => ({ ...s, generatedPrompt }));
+  const loadFromTemplate = (h: TemplateHandoff) =>
+    setState((s) => ({
+      ...s,
+      rawInput: h.rawInput,
+      category: h.category,
+      followUpAnswers: h.fieldValues, // so Output > Regenerate re-uses the template answers
+      followUpQuestions: [],
+      aiTarget: h.aiTarget ?? s.aiTarget,
+      generatedPrompt: h.generatedPrompt ?? null,
+      sourceTemplate: { id: h.templateId, title: h.templateTitle },
+    }));
   const reset = () => setState(defaultState);
 
   return (
@@ -69,6 +96,7 @@ export function CurrentPromptProvider({ children }: { children: ReactNode }) {
         setFollowUpAnswers,
         setAiTarget,
         setGeneratedPrompt,
+        loadFromTemplate,
         reset,
       }}
     >
